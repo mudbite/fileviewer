@@ -811,17 +811,40 @@ async function openPdf(pdf) {
     window.open(pdf.url, "_blank");
     return;
   }
+
   try {
     const blob = await getBlob(pdf.storeKey);
-    if (!blob) { toast("File not found — it may have been cleared."); return; }
+
+    if (!blob) {
+      toast("File not found.");
+      return;
+    }
+
+    const file = new File([blob], pdf.title + ".pdf", {
+      type: "application/pdf"
+    });
+
+    if (navigator.canShare && navigator.share) {
+      await navigator.share({
+        title: pdf.title,
+        files: [file]
+      });
+      return;
+    }
+
     const url = URL.createObjectURL(blob);
-    document.getElementById("viewerTitle").textContent = pdf.title;
-    document.getElementById("pdfFrame").src = url;
-    document.getElementById("viewer").classList.add("open");
-  } catch(e) {
-    toast("Could not open file.");
+    window.open(url, "_blank");
+
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 10000);
+
+  } catch (e) {
+    console.error(e);
+    toast("Could not open PDF.");
   }
 }
+
 function closeViewer() {
   const frame = document.getElementById("pdfFrame");
   URL.revokeObjectURL(frame.src);
